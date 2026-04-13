@@ -4,7 +4,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from asammdf import MDF, Signal
+
+from mdflib._testing import SignalSpec, create_mdf4
 
 
 @pytest.fixture
@@ -17,48 +18,25 @@ def sample_mdf_path(tmp_path: Path) -> Path:
     - StuckFortyTwo: 全サンプル 42.0 の固着信号
     - Temperature: 20〜80 の変動信号
     """
-    mdf = MDF()
     t = np.linspace(0, 10, 1000)
-
-    signals = [
-        Signal(
-            samples=np.linspace(0, 100, 1000),
-            timestamps=t, name="Speed", unit="km/h",
-        ),
-        Signal(
-            samples=np.zeros(1000),
-            timestamps=t, name="StuckZero", unit="V",
-        ),
-        Signal(
-            samples=np.full(1000, 42.0),
-            timestamps=t, name="StuckFortyTwo", unit="deg",
-        ),
-        Signal(
-            samples=np.linspace(20, 80, 1000),
-            timestamps=t, name="Temperature", unit="degC",
-        ),
+    specs = [
+        SignalSpec("Speed", np.linspace(0, 100, 1000), t, "km/h"),
+        SignalSpec("StuckZero", np.zeros(1000), t, "V"),
+        SignalSpec("StuckFortyTwo", np.full(1000, 42.0), t, "deg"),
+        SignalSpec("Temperature", np.linspace(20, 80, 1000), t, "degC"),
     ]
-    mdf.append(signals)
-
-    path = tmp_path / "test.mf4"
-    mdf.save(str(path), overwrite=True)
-    mdf.close()
-    return path
+    return create_mdf4(specs, tmp_path / "test.mf4")
 
 
 @pytest.fixture
 def empty_signal_mdf_path(tmp_path: Path) -> Path:
     """空の信号を含むMDF4ファイル。"""
-    mdf = MDF()
-    sig = Signal(
-        samples=np.array([], dtype=np.float64),
-        timestamps=np.array([], dtype=np.float64),
-        name="EmptySignal",
-        unit="V",
-    )
-    mdf.append([sig])
-
-    path = tmp_path / "empty.mf4"
-    mdf.save(str(path), overwrite=True)
-    mdf.close()
-    return path
+    specs = [
+        SignalSpec(
+            "EmptySignal",
+            np.array([], dtype=np.float64),
+            np.array([], dtype=np.float64),
+            "V",
+        ),
+    ]
+    return create_mdf4(specs, tmp_path / "empty.mf4")

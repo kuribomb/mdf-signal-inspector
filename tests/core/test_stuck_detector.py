@@ -76,10 +76,10 @@ class TestFilterSignalsByRegex:
     @pytest.fixture
     def signals(self) -> list[SignalInfo]:
         return [
-            SignalInfo("ECU1_Speed", "km/h", 100, 0, 1),
-            SignalInfo("ECU1_Throttle", "%", 100, 0, 2),
-            SignalInfo("ECU2_BrakePress", "bar", 100, 0, 3),
-            SignalInfo("Temperature", "degC", 100, 0, 4),
+            SignalInfo("ECU1_Speed", "km/h", 100),
+            SignalInfo("ECU1_Throttle", "%", 100),
+            SignalInfo("ECU2_BrakePress", "bar", 100),
+            SignalInfo("Temperature", "degC", 100),
         ]
 
     def test_empty_pattern_returns_all(self, signals: list[SignalInfo]) -> None:
