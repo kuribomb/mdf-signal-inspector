@@ -65,29 +65,33 @@ class ResultTableModel(QAbstractTableModel):
             return None
         row = self._rows[index.row()]
         col = index.column()
-
         if role == Qt.ItemDataRole.DisplayRole:
-            if col == 0:
-                return row.signal_name
-            if col == 1:
-                return row.result.value
-            if col == 2:
-                if row.stuck_value is not None:
-                    return str(row.stuck_value)
-                return "-"
-            if col == 3:
-                return str(row.sample_count)
-
+            return self._display_data(row, col)
         if role == Qt.ItemDataRole.ForegroundRole:
-            if col == 1:
-                from PySide6.QtGui import QColor
+            return self._foreground_data(row, col)
+        return None
 
-                if row.result == StuckResult.FAIL:
-                    return QColor("red")
-                if row.result == StuckResult.OK:
-                    return QColor("green")
+    def _display_data(self, row: StuckCheckRow, col: int) -> str | None:
+        match col:
+            case 0:
+                return row.signal_name
+            case 1:
+                return row.result.value
+            case 2:
+                return str(row.stuck_value) if row.stuck_value is not None else "-"
+            case 3:
+                return str(row.sample_count)
+        return None
+
+    def _foreground_data(self, row: StuckCheckRow, col: int):
+        from PySide6.QtGui import QColor
+
+        if col != 1:
             return None
-
+        if row.result == StuckResult.FAIL:
+            return QColor("red")
+        if row.result == StuckResult.OK:
+            return QColor("green")
         return None
 
     def headerData(
@@ -253,18 +257,9 @@ class MainWindow(QMainWindow):
         thread = QThread()
         worker = LoadWorker(path)
         worker.moveToThread(thread)
-
-        thread.started.connect(worker.run)
         worker.finished.connect(lambda loader: self._on_load_finished(loader))
         worker.error.connect(lambda msg: self._on_load_error(msg))
-        worker.finished.connect(thread.quit)
-        worker.error.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        worker.error.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-
-        self._worker_thread = thread
-        thread.start()
+        self._start_worker(thread, worker)
 
     def _on_load_finished(self, loader: MdfLoader) -> None:
         if self._loader is not None:
@@ -292,16 +287,8 @@ class MainWindow(QMainWindow):
             return
 
         pattern = self._txt_filter.text().strip()
-
-        # 正規表現の事前バリデーション
-        if pattern:
-            try:
-                re.compile(pattern)
-            except re.error as e:
-                self._txt_filter.setStyleSheet("background-color: #ffcccc;")
-                self._status.showMessage(f"正規表現エラー: {e}")
-                return
-        self._txt_filter.setStyleSheet("")
+        if not self._validate_regex(pattern):
+            return
 
         self._btn_check.setEnabled(False)
         self._status.showMessage("固着チェック実行中...")
@@ -309,16 +296,32 @@ class MainWindow(QMainWindow):
         thread = QThread()
         worker = StuckCheckWorker(self._loader, pattern)
         worker.moveToThread(thread)
-
-        thread.started.connect(worker.run)
         worker.finished.connect(lambda rows: self._on_check_finished(rows))
         worker.error.connect(lambda msg: self._on_check_error(msg))
+        self._start_worker(thread, worker)
+
+    def _validate_regex(self, pattern: str) -> bool:
+        """正規表現を検証する。エラー時はUIにフィードバックして False を返す。"""
+        if not pattern:
+            self._txt_filter.setStyleSheet("")
+            return True
+        try:
+            re.compile(pattern)
+            self._txt_filter.setStyleSheet("")
+            return True
+        except re.error as e:
+            self._txt_filter.setStyleSheet("background-color: #ffcccc;")
+            self._status.showMessage(f"正規表現エラー: {e}")
+            return False
+
+    def _start_worker(self, thread: QThread, worker: QObject) -> None:
+        """QThread + Worker を起動する共通処理。"""
+        thread.started.connect(worker.run)
         worker.finished.connect(thread.quit)
         worker.error.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         worker.error.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
-
         self._worker_thread = thread
         thread.start()
 
