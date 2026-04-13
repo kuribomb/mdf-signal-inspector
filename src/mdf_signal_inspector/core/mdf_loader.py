@@ -110,19 +110,23 @@ class MdfLoader:
 
     def _calc_duration(self) -> float:
         """計測期間（秒）を計算する。"""
-        max_duration = 0.0
         for _name, occurrences in self._mdf.channels_db.items():
             if _name == "time":
                 continue
             group_idx, channel_idx = occurrences[0]
-            try:
-                sig = self._mdf.get(
-                    _name, group=group_idx, index=channel_idx, raw=True
-                )
-                if len(sig.timestamps) > 1:
-                    d = float(sig.timestamps[-1] - sig.timestamps[0])
-                    max_duration = max(max_duration, d)
-                    break  # 最初の有効な信号から取得すれば十分
-            except Exception:
-                continue
-        return max_duration
+            duration = self._read_duration(_name, group_idx, channel_idx)
+            if duration is not None:
+                return duration
+        return 0.0
+
+    def _read_duration(
+        self, name: str, group_idx: int, channel_idx: int
+    ) -> float | None:
+        """1信号からタイムスタンプ幅を読み取る。読めない場合は None。"""
+        try:
+            sig = self._mdf.get(name, group=group_idx, index=channel_idx, raw=True)
+        except Exception:
+            return None
+        if len(sig.timestamps) > 1:
+            return float(sig.timestamps[-1] - sig.timestamps[0])
+        return None
