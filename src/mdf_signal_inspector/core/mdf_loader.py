@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from mdf_signal_inspector.mdf import MdfFile, SignalData  # re-export SignalData
+from mdflib import MdfFile, SignalData  # re-export SignalData
 
 __all__ = ["FileInfo", "MdfLoader", "SignalData", "SignalInfo"]
 

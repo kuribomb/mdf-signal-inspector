@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from mdf_signal_inspector.mdf import MdfFile
+from mdflib import MdfFile
 
 
 class TestMdfFileSignalNames:

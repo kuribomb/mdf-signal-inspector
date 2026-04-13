@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from mdf_signal_inspector.mdf._testing import SignalSpec, create_mdf4
+from mdflib._testing import SignalSpec, create_mdf4
 
 
 @pytest.fixture
